@@ -1,4 +1,3 @@
- Use Ubuntu 24.04 LTS base image
 FROM ubuntu:24.04
 
 # Prevent interactive prompts during apt package installation
