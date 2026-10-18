@@ -33,4 +33,4 @@ COPY . .
 
 # Set default command (update to match your application entrypoint)
 # TODO: set this to be the entrypoint of our script
-CMD ["python3", "iperf_client.py"]
+CMD ["python3", "entry.py"]
