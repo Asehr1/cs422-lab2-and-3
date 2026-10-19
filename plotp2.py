@@ -3,6 +3,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import statistics
 
@@ -37,22 +38,22 @@ plt.tight_layout()
 plt.savefig("plotsp2.png")
 
 #Scatterplots
-fig, axs = plt.subplots(1, 3, sharey = True)
+fig2, axes = plt.subplots(1, 3, sharey = True)
 datatypes = ["snd_cwnd", "rtt", "lost"]
 colors = ["blue", "red", "yellow"]
 
-for ax, datatype, color in zip(axs, datatypes, colors):
-    ax.scatter(g[datatype], g["mbps"], edgecolors="black", color=color)
+for axe, datatype, color in zip(axes, datatypes, colors):
+    axe.scatter(g[datatype], g["mbps"], edgecolors="black", color=color)
     match datatype:
         case "snd_cwnd":
-            ax.set_xlabel("Congestion Window")
-            ax.set_title("snd_cwnd vs. goodput")
+            axe.set_xlabel("Congestion Window")
+            axe.set_title("snd_cwnd vs. goodput")
         case "rtt":
-            ax.set_xlabel("Round Trip Time")
-            ax.set_title("rtt vs. goodput")
+            axe.set_xlabel("Round Trip Time")
+            axe.set_title("rtt vs. goodput")
         case "lost":
-            ax.set_xlabel("Lost Packets")
-            ax.set_title("lost packets vs. goodput")
-axs[0].set_ylabel("Goodput (mbps)")
-plt.tight_layout()
+            axe.set_xlabel("Lost Packets")
+            axe.set_title("lost packets vs. goodput")
+axes[0].set_ylabel("Goodput (mbps)")
+#plt.tight_layout()
 plt.savefig("goodput_comps.png")
