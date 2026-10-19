@@ -23,16 +23,16 @@ for ax, datatype, color in zip(axs, datatypes, colors):
     match datatype:
         case "mbps":
             ax.set_xlabel("Goodput (mbps)")
-            ax.set_title(f"{rep_host}: goodput over time")
+            ax.set_title("goodput v. time")
         case "snd_cwnd":
             ax.set_xlabel("Congestion Window")
-            ax.set_title(f"{rep_host}: snd_cwnd over time")
+            ax.set_title("cwnd v. time")
         case "rtt":
             ax.set_xlabel("Round Trip Time")
-            ax.set_title(f"{rep_host}: rtt over time")
+            ax.set_title("rtt v. time")
         case "lost":
             ax.set_xlabel("Lost Packets")
-            ax.set_title(f"{rep_host}: lost packets over time")
+            ax.set_title("lost v. time")
 axs[0].set_ylabel("Time (seconds)")
 plt.tight_layout()
 plt.savefig("plotsp2.png")
