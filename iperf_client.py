@@ -153,7 +153,6 @@ def send_data(data, duration, blksize=128 * 1024, interval=0.2):
     buf = memoryview(os.urandom(blksize))
     bytes_sent = 0
     samples = []
-    samplesp2 = []
 
     start = time.monotonic()
     end = start + duration
@@ -168,10 +167,8 @@ def send_data(data, duration, blksize=128 * 1024, interval=0.2):
             acked = get_bytes_acked(data)
             dt = now - prev_time
             if dt > 0:
-                samples.append((now - start, (acked - prev_acked) * 8 / dt))
-                # Gets TCP statistics for part 2
                 tcp_info = get_tcp_stats(data)
-                samplesp2.append((now - start, (acked - prev_acked) * 8 / dt, tcp_info[0], tcp_info[1], tcp_info[2], tcp_info[3]))
+                samples.append((now - start, (acked - prev_acked) * 8 / dt, tcp_info[0], tcp_info[1], tcp_info[2], tcp_info[3]))
                 prev_time = now
                 prev_acked = acked
             next_sample = max(next_sample + interval, now + interval / 2)
@@ -185,15 +182,15 @@ def send_data(data, duration, blksize=128 * 1024, interval=0.2):
             raise ConnectionError(f"dropped data connection: {e}")
         bytes_sent += n
 
-    return bytes_sent, time.monotonic() - start, samples, samplesp2
+    return bytes_sent, time.monotonic() - start, samples
 
 
 def get_tcp_stats(sock):
     info = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_INFO, 100)
-    sndcwnd = struct.unpack_from("i", info, 80)[0];
-    rtt = struct.unpack_from("i", info, 68)[0];
-    rttvar = struct.unpack_from("i", info, 72)[0];
-    lost = struct.unpack_from("i", info, 32)[0];
+    sndcwnd = struct.unpack_from("i", info, 80)[0]
+    rtt = struct.unpack_from("i", info, 68)[0]
+    rttvar = struct.unpack_from("i", info, 72)[0]
+    lost = struct.unpack_from("i", info, 32)[0]
     return ((sndcwnd, rtt, rttvar, lost))
 
 
@@ -237,13 +234,13 @@ def run_test(host, port_field, duration=10, congestion=None):
         algo = get_congestion(data)
         wait_for_test_running(ctrl)
 
-        bytes_sent, elapsed, samples, samplesp2 = send_data(data, duration)
+        bytes_sent, elapsed, samples = send_data(data, duration)
         retrans = get_total_retrans(data)
 
         results = build_results(bytes_sent, retrans, algo, elapsed)
         server_results = finish_test(ctrl, results)
         server_bytes = server_results["streams"][0].get("bytes")
-        return port, algo, samples, samplesp2
+        return port, algo, samples
     finally:
         if data:
             data.close()
@@ -261,15 +258,13 @@ def run_destinations(servers, n, duration, congestion, seed=None, max_attempts=N
     log = []
     successes = 0
     all_samples = []
-    all_samplesp2 = []
     for host, ports in pool[:max_attempts]:
         if successes == n:
             break
         print(f"[{successes+1}/{n}] trying {host} ports {ports}")
         try:
-            port, algo, samples, samplesp2 = run_test(host, ports, duration, congestion)
-            all_samples += [(host, port, algo, t, g) for t, g in samples]
-            all_samplesp2 += [(host, port, algo, t, g, sc, r, rv, l) for t, g, sc, r, rv, l in samplesp2]
+            port, algo, samples = run_test(host, ports, duration, congestion)
+            all_samples += [(host, port, algo, t, g, sc, r, rv, l) for t, g, sc, r, rv, l in samples]
             log.append((host, port, "success"))
             successes += 1
         except Exception as e:
@@ -279,7 +274,7 @@ def run_destinations(servers, n, duration, congestion, seed=None, max_attempts=N
     if successes < n:
         print(f"SHORTFALL: wanted {n} destinations, got {successes} "
               f"after {len(log)} attempts")
-    return log, all_samples, all_samplesp2
+    return log, all_samples
 
 
 def get_bytes_acked(sock):
@@ -299,7 +294,7 @@ def main():
     with open(SERVER_FILE, newline="") as f:
         servers = [(r["IP/HOST"], r["PORT"]) for r in csv.DictReader(f)]
     
-    log, samples, samplesp2 = run_destinations(servers, args.n, args.duration, args.congestion, args.seed, args.max_attempts)
+    log, samples = run_destinations(servers, args.n, args.duration, args.congestion, args.seed, args.max_attempts)
 
     with open("selected_destinations.csv", "w", newline="") as f:
         w = csv.writer(f)
@@ -310,12 +305,6 @@ def main():
         w = csv.writer(f)
         w.writerow(["host", "port", "algo", "t_s", "goodput_bps"])
         w.writerows(samples)
-
-    with open("samplesp2.csv", "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["host", "port", "algo", "t_s", "goodput_bps", "snd_cwnd", "rtt", "rttvar", "lost"])
-        w.writerows(samplesp2)
-
 
 if __name__ == "__main__":
     main()

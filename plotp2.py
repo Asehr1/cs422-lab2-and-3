@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import statistics
 
-df = pd.read_csv("samplesp2.csv")
+df = pd.read_csv("samples.csv")
 df["mbps"] = df["goodput_bps"] / 1e6
 
 rep_host = statistics.mode(df["host"])
