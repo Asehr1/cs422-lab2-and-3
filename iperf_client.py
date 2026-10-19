@@ -303,7 +303,7 @@ def main():
 
     with open("samples.csv", "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["host", "port", "algo", "t_s", "goodput_bps"])
+        w.writerow(["host", "port", "algo", "t_s", "goodput_bps", "snd_cwnd", "rtt", "rttvar", "lost"])
         w.writerows(samples)
 
 if __name__ == "__main__":
