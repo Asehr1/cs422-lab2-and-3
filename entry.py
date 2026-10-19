@@ -2,12 +2,14 @@
 from pathlib import Path
 import sys
 import iperf_client
+import random
 
 cong_algs = ["cubic", "reno", "bbr"]
 
 def main():
+	seed = random.randint(0, sys.maxsize)
 	for alg in cong_algs:
-		sys.argv = ["iperf_client.py", "-congestion", f"{alg}"]
+		sys.argv = ["iperf_client.py", "-congestion", f"{alg}", "-seed", f"{seed}"]
 		iperf_client.main()
 		with open("goodput_plot.py", "r") as file:
 			exec(file.read())

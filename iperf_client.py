@@ -298,7 +298,7 @@ def main():
 
     with open(SERVER_FILE, newline="") as f:
         servers = [(r["IP/HOST"], r["PORT"]) for r in csv.DictReader(f)]
-    
+
     log, samples, samplesp2 = run_destinations(servers, args.n, args.duration, args.congestion, args.seed, args.max_attempts)
 
     with open("selected_destinations.csv", "w", newline="") as f:
