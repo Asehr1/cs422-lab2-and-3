@@ -1,0 +1,13 @@
+address,port,status
+speedtest.syd12.au.leaseweb.net,5201,success
+185.152.67.2,5201,success
+89.187.165.1,5201,failure
+109.61.94.65,5201,success
+89.187.162.1,5201,success
+176.23.128.102,30002,success
+37.19.218.65,5201,success
+96.45.41.167,30001,success
+speedtest.rapidswitch.com,5201,success
+122.228.230.122,5201,success
+speedtestfl.telecom.mu,5200-5209,failure
+iperf1.surfwireless.nl,5201,success
