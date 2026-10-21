@@ -13,19 +13,24 @@ def main():
 		iperf_client.main()
 		with open("goodput_plot.py", "r") as file:
 			exec(file.read())
-			# change file names to not be overwritten by subsequent cong algs
-			old = Path("selected_destinations.csv")
-			new = Path(f"selected_destinations_{alg}.csv")
-			old.rename(new)
-			old = Path("samples.csv")
-			new = Path(f"samples_{alg}.csv")
-			old.rename(new)
-			old = Path("goodput_summary.csv")
-			new = Path(f"goodput_summary_{alg}.csv")
-			old.rename(new)
-			old = Path("goodput.png")
-			new = Path(f"goodput_{alg}.png")
-			old.rename(new)
+		with open("plotp2.py", "r") as file:
+			exec(file.read())
+		# change file names to not be overwritten by subsequent cong algs
+		old = Path("selected_destinations.csv")
+		new = Path(f"selected_destinations_{alg}.csv")
+		old.rename(new)
+		old = Path("samples.csv")
+		new = Path(f"samples_{alg}.csv")
+		old.rename(new)
+		old = Path("goodput_summary.csv")
+		new = Path(f"goodput_summary_{alg}.csv")
+		old.rename(new)
+		old = Path("goodput.png")
+		new = Path(f"goodput_{alg}.png")
+		old.rename(new)
+		old = Path("plotsp2.png")
+		new = Path(f"plotsp2_{alg}.png")
+		old.rename(new)
 
 if __name__ == "__main__":
 	main()
