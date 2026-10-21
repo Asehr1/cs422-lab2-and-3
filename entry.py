@@ -9,6 +9,7 @@ cong_algs = ["cubic", "reno", "bbr"]
 def main():
 	seed = random.randint(0, sys.maxsize)
 	for alg in cong_algs:
+		print(f"\nRunning {alg}")
 		sys.argv = ["iperf_client.py", "-congestion", f"{alg}", "-seed", f"{seed}"]
 		iperf_client.main()
 		with open("goodput_plot.py", "r") as file:
@@ -31,6 +32,10 @@ def main():
 		old = Path("plotsp2.png")
 		new = Path(f"plotsp2_{alg}.png")
 		old.rename(new)
+		old = Path("goodput_comps.png")
+		new = Path(f"goodput_comps_{alg}.png")
+		old.rename(new)
+		print(f"Completed {alg}\n")
 
 if __name__ == "__main__":
 	main()
