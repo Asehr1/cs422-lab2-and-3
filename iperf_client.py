@@ -1,4 +1,5 @@
 import socket
+import select
 import random
 import struct
 import json
@@ -160,6 +161,8 @@ def send_data(data, duration, blksize=128 * 1024, interval=0.2):
     prev_time = start
     prev_acked = get_bytes_acked(data)
     next_sample = start + interval
+    # non-blocking sends, so a full send buffer can't delay a sample
+    data.setblocking(False)
 
     while True:
         now = time.monotonic()
@@ -167,17 +170,19 @@ def send_data(data, duration, blksize=128 * 1024, interval=0.2):
             acked = get_bytes_acked(data)
             dt = now - prev_time
             if dt > 0:
-                tcp_info = get_tcp_stats(data)
-                samples.append((now - start, (acked - prev_acked) * 8 / dt, tcp_info[0], tcp_info[1], tcp_info[2], tcp_info[3]))
+                samples.append((now - start, (acked - prev_acked) * 8 / dt) + get_tcp_stats(data))
                 prev_time = now
                 prev_acked = acked
             next_sample = max(next_sample + interval, now + interval / 2)
         if now >= end:
             break
+        _, writable, _ = select.select([], [data], [], min(next_sample, end) - now)
+        if not writable:
+            continue
         try:
             n = data.send(buf)
-        except socket.timeout:
-            raise ConnectionError("send timed out")
+        except BlockingIOError:
+            continue
         except (BrokenPipeError, ConnectionResetError) as e:
             raise ConnectionError(f"dropped data connection: {e}")
         bytes_sent += n
@@ -185,13 +190,27 @@ def send_data(data, duration, blksize=128 * 1024, interval=0.2):
     return bytes_sent, time.monotonic() - start, samples
 
 
+# struct tcp_info offsets (include/uapi/linux/tcp.h)
+TCP_STATS_COLUMNS = ["snd_cwnd", "rtt", "rttvar", "lost", "ca_state", "rto_count",
+                     "snd_ssthresh", "total_retrans", "min_rtt", "delivery_rate_Bps"]
+
+
 def get_tcp_stats(sock):
-    info = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_INFO, 100)
+    info = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_INFO, 200)
     sndcwnd = struct.unpack_from("i", info, 80)[0]
     rtt = struct.unpack_from("i", info, 68)[0]
     rttvar = struct.unpack_from("i", info, 72)[0]
     lost = struct.unpack_from("i", info, 32)[0]
-    return ((sndcwnd, rtt, rttvar, lost))
+    # loss signals: ca_state 3 = Recovery (3 dup ACKs), 4 = Loss (timeout);
+    # tcpi_retransmits = consecutive RTO count; tcpi_total_retrans = cumulative
+    ca_state = info[1]
+    rto_count = info[2]
+    ssthresh = struct.unpack_from("I", info, 76)[0]
+    total_retrans = struct.unpack_from("I", info, 100)[0]
+    min_rtt = struct.unpack_from("I", info, 148)[0]
+    delivery_rate = struct.unpack_from("=Q", info, 160)[0]
+    return (sndcwnd, rtt, rttvar, lost, ca_state, rto_count,
+            ssthresh, total_retrans, min_rtt, delivery_rate)
 
 
 def get_total_retrans(sock):
@@ -224,7 +243,7 @@ def finish_test(ctrl, results):
     return server_results
 
 
-def run_test(host, port_field, duration=10, congestion=None):
+def run_test(host, port_field, duration=10, congestion=None, interval=0.2):
     ctrl = None
     data = None
     try:
@@ -234,7 +253,7 @@ def run_test(host, port_field, duration=10, congestion=None):
         algo = get_congestion(data)
         wait_for_test_running(ctrl)
 
-        bytes_sent, elapsed, samples = send_data(data, duration)
+        bytes_sent, elapsed, samples = send_data(data, duration, interval=interval)
         retrans = get_total_retrans(data)
 
         results = build_results(bytes_sent, retrans, algo, elapsed)
@@ -264,7 +283,7 @@ def run_destinations(servers, n, duration, congestion, seed=None, max_attempts=N
         print(f"[{successes+1}/{n}] trying {host} ports {ports}")
         try:
             port, algo, samples = run_test(host, ports, duration, congestion)
-            all_samples += [(host, port, algo, t, g, sc, r, rv, l) for t, g, sc, r, rv, l in samples]
+            all_samples += [(host, port, algo) + s for s in samples]
             log.append((host, port, "success"))
             successes += 1
         except Exception as e:
@@ -303,7 +322,7 @@ def main():
 
     with open("samples.csv", "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["host", "port", "algo", "t_s", "goodput_bps", "snd_cwnd", "rtt", "rttvar", "lost"])
+        w.writerow(["host", "port", "algo", "t_s", "goodput_bps"] + TCP_STATS_COLUMNS)
         w.writerows(samples)
 
 if __name__ == "__main__":

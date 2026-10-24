@@ -1,0 +1,2 @@
+seed,runs,duration_s,interval_s,kernel
+1,4,10,0.2,6.8.0-147-generic
